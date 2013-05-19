@@ -24,6 +24,7 @@
     },
     "target-dir": "Mopa/Bundle/WSSEAuthenticationBundle",
     "require": {
-        "symfony/symfony": ">=2.1.0"
+        "symfony/symfony": ">=2.1.0",
+        "kriswallsmith/buzz": ">=v0.9"
     }
 }
