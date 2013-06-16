@@ -32,9 +32,9 @@ app/config/config.yml
 ```
 # Mopa Rackspace Cloud Files configuration
 mopa_wsse_authentication:
-    provider_class: Mopa\Bundle\WSSEAuthenticationBundle\Security\Authentication\Provider\Provider
-    listener_class: Mopa\Bundle\WSSEAuthenticationBundle\Security\Firewall\Listener
-    factory_class: Mopa\Bundle\WSSEAuthenticationBundle\Security\Factory\WSSEFactory
+    provider_class: Mopa\Bundle\WSSEAuthenticationBundle\Security\Authentication\Provider\WsseAuthenticationProvider
+    listener_class: Mopa\Bundle\WSSEAuthenticationBundle\Security\Firewall\WsseListener
+    factory_class: Mopa\Bundle\WSSEAuthenticationBundle\Security\Factory\WsseFactory
 ```
 
 ## Usage example
