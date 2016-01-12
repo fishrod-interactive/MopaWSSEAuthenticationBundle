@@ -2,9 +2,9 @@
 
 namespace Mopa\Bundle\WSSEAuthenticationBundle\Tests\Security\Firewall;
 
-use Mopa\Bundle\WSSEAuthenticationBundle\Security\Firewall\Listener;
+use Mopa\Bundle\WSSEAuthenticationBundle\Security\Authentication\Token\WsseToken;
+use Mopa\Bundle\WSSEAuthenticationBundle\Security\Firewall\WsseListener;
 use Symfony\Component\HttpFoundation\Response;
-use Mopa\Bundle\WSSEAuthenticationBundle\Security\Authentication\Token\Token;
 
 class ListenerTest extends \PHPUnit_Framework_TestCase
 {
@@ -21,7 +21,7 @@ class ListenerTest extends \PHPUnit_Framework_TestCase
     /**
      * @var \PHPUnit_Framework_MockObject_MockObject
      */
-    private $securityContext;
+    private $tokenStorage;
 
     /**
      * @var \PHPUnit_Framework_MockObject_MockObject
@@ -33,7 +33,7 @@ class ListenerTest extends \PHPUnit_Framework_TestCase
         $this->responseEvent = $this->getMockBuilder('\Symfony\Component\HttpKernel\Event\GetResponseEvent')->disableOriginalConstructor()->getMock();
         $this->request = $this->getMockForAbstractClass('Symfony\Component\HttpFoundation\Request');
         $this->responseEvent->expects($this->once())->method('getRequest')->will($this->returnValue($this->request));
-        $this->securityContext = $this->getMock('\Symfony\Component\Security\Core\SecurityContextInterface');
+        $this->tokenStorage = $this->getMock('\Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface');
         $this->authenticationManager = $this->getMock('\Symfony\Component\Security\Core\Authentication\AuthenticationManagerInterface');
     }
 
@@ -42,11 +42,11 @@ class ListenerTest extends \PHPUnit_Framework_TestCase
      */
     public function handleUnauthorized()
     {
-        $listener = new Listener($this->securityContext, $this->authenticationManager);
+        $listener = new WsseListener($this->tokenStorage, $this->authenticationManager);
         $response = new Response();
-        $response->setStatusCode(401);//unauthorized
+        $response->setStatusCode(403);//unauthorized
         $this->responseEvent->expects($this->once())->method('setResponse')->with($response);
-        $result = $listener->handle($this->responseEvent);
+        $listener->handle($this->responseEvent);
     }
 
     /**
@@ -54,12 +54,12 @@ class ListenerTest extends \PHPUnit_Framework_TestCase
      */
     public function handleForbidden()
     {
-        $listener = new Listener($this->securityContext, $this->authenticationManager);
+        $listener = new WsseListener($this->tokenStorage, $this->authenticationManager);
         $this->request->headers->add(array('X-WSSE'=>'temp'));
         $response = new Response();
         $response->setStatusCode(403);//unauthorized
         $this->responseEvent->expects($this->once())->method('setResponse')->with($response);
-        $result = $listener->handle($this->responseEvent);
+        $listener->handle($this->responseEvent);
     }
 
     /**
@@ -67,16 +67,16 @@ class ListenerTest extends \PHPUnit_Framework_TestCase
      */
     public function handleReturnToken()
     {
-        $token = new Token();
+        $token = new WsseToken();
         $token->setUser('admin');
         $token->digest = 'admin';
         $token->nonce = 'admin';
         $token->created = '2010-12-12 20:00:00';
         $tokenMock2 = $this->getMock('Symfony\Component\Security\Core\Authentication\Token\TokenInterface');
         $this->authenticationManager->expects($this->once())->method('authenticate')->with($token)->will($this->returnValue($tokenMock2));
-        $this->securityContext->expects($this->once())->method('setToken')->with($tokenMock2);
+        $this->tokenStorage->expects($this->once())->method('setToken')->with($tokenMock2);
         $this->request->headers->add(array('X-WSSE'=>'UsernameToken Username="admin", PasswordDigest="admin", Nonce="admin", Created="2010-12-12 20:00:00"'));
-        $listener = new Listener($this->securityContext, $this->authenticationManager);
+        $listener = new WsseListener($this->tokenStorage, $this->authenticationManager);
         $listener->handle($this->responseEvent);
     }
 
@@ -85,7 +85,7 @@ class ListenerTest extends \PHPUnit_Framework_TestCase
      */
     public function handleReturnResponse()
     {
-        $token = new Token();
+        $token = new WsseToken();
         $token->setUser('admin');
         $token->digest = 'admin';
         $token->nonce = 'admin';
@@ -94,7 +94,7 @@ class ListenerTest extends \PHPUnit_Framework_TestCase
         $this->authenticationManager->expects($this->once())->method('authenticate')->with($token)->will($this->returnValue($response));
         $this->responseEvent->expects($this->once())->method('setResponse')->with($response);
         $this->request->headers->add(array('X-WSSE'=>'UsernameToken Username="admin", PasswordDigest="admin", Nonce="admin", Created="2010-12-12 20:00:00"'));
-        $listener = new Listener($this->securityContext, $this->authenticationManager);
+        $listener = new WsseListener($this->tokenStorage, $this->authenticationManager);
         $listener->handle($this->responseEvent);
     }
 

@@ -5,9 +5,9 @@ namespace Mopa\Bundle\WSSEAuthenticationBundle\Security\Firewall;
 
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Http\Firewall\ListenerInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
-use Symfony\Component\Security\Core\SecurityContextInterface;
 use Symfony\Component\Security\Core\Authentication\AuthenticationManagerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Mopa\Bundle\WSSEAuthenticationBundle\Security\Authentication\Token\WsseToken;
@@ -15,13 +15,13 @@ use UnexpectedValueException;
 
 class WsseListener implements ListenerInterface
 {
-    protected $securityContext;
+    protected $tokenStorage;
     protected $authenticationManager;
     private $wsseHeader;
 
-    public function __construct(SecurityContextInterface $securityContext, AuthenticationManagerInterface $authenticationManager)
+    public function __construct(TokenStorageInterface $tokenStorage, AuthenticationManagerInterface $authenticationManager)
     {
-        $this->securityContext = $securityContext;
+        $this->tokenStorage = $tokenStorage;
         $this->authenticationManager = $authenticationManager;
     }
 
@@ -87,7 +87,7 @@ class WsseListener implements ListenerInterface
                 try {
                     $returnValue = $this->authenticationManager->authenticate($token);
                     if ($returnValue instanceof TokenInterface) {
-                        return $this->securityContext->setToken($returnValue);
+                        return $this->tokenStorage->setToken($returnValue);
                     } else if ($returnValue instanceof Response) {
                         return $event->setResponse($returnValue);
                     }

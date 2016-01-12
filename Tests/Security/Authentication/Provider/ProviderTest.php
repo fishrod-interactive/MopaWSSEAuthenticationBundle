@@ -4,10 +4,12 @@
  */
 namespace Mopa\Bundle\WSSEAuthenticationBundle\Tests\Security\Authentication\Provider;
 
-use Mopa\Bundle\WSSEAuthenticationBundle\Security\Authentication\Provider\Provider;
-use Mopa\Bundle\WSSEAuthenticationBundle\Security\Authentication\Token\Token;
 
-class ProviderTestSimple extends Provider
+use Mopa\Bundle\WSSEAuthenticationBundle\Security\Authentication\Provider\WsseAuthenticationProvider;
+use Mopa\Bundle\WSSEAuthenticationBundle\Security\Authentication\Token\WsseToken;
+use Symfony\Component\Security\Core\User\UserCheckerInterface;
+
+class ProviderTestSimple extends WsseAuthenticationProvider
 {
     public function validateDigest($digest, $nonce, $created, $secret)
     {
@@ -55,14 +57,14 @@ class ProviderTest extends \PHPUnit_Framework_TestCase
      */
     public function supports($token, $expected)
     {
-        $provider = new Provider($this->userProvider);
+        $provider = new WsseAuthenticationProvider($this->userProvider);
         $this->assertEquals($expected, $provider->supports($token));
     }
 
     public function providerSupports()
     {
         return array(
-            array(new Token(), true),
+            array(new WsseToken(), true),
             array($this->getMock('Symfony\Component\Security\Core\Authentication\Token\TokenInterface'), false)
         );
     }
@@ -179,8 +181,18 @@ class ProviderTest extends \PHPUnit_Framework_TestCase
      */
     public function authenticateExpectedException()
     {
-        $provider = new ProviderTestSimple($this->userProvider);
-        $provider->authenticate(new Token());
+        $provider = new ProviderTestSimple(
+            'wsse_mopa',
+            __DIR__ . '/../../../nonceDir',
+            300,
+            $this->userProvider,
+            $this->getMock(UserCheckerInterface::class)
+        );
+        $user = $this->getMock('Symfony\Component\Security\Core\User\UserInterface');
+        $user->expects($this->once())->method('getPassword')->will($this->returnValue('test'));
+        $this->userProvider->expects($this->once())->method('loadUserByUsername')->will($this->returnValue($user));
+        $provider->authenticate(new WsseToken());
+
         /*$user = $this->userProvider->loadUserByUsername($token->getUsername());
 
         if ($user && $this->validateDigest($token->digest, $token->nonce, $token->created, $user->getPassword()))
@@ -209,7 +221,7 @@ class ProviderTest extends \PHPUnit_Framework_TestCase
         $user->expects($this->once())->method('getRoles')->will($this->returnValue(array()));
         $this->userProvider->expects($this->once())->method('loadUserByUsername')->will($this->returnValue($user));
 
-        $expected = new Token();
+        $expected = new WsseToken();
         $expected->setUser($user);
         $expected->setAuthenticated(true);
 
@@ -217,12 +229,18 @@ class ProviderTest extends \PHPUnit_Framework_TestCase
         $time = date('Y-m-d H:i:s');
         $digest = base64_encode(sha1(base64_decode(base64_encode('test')).$time.'test', true));
         //$digest, base64_encode('test'), $time, 'test', true),
-        $token = new Token();
+        $token = new WsseToken();
         $token->digest = $digest;
         $token->nonce = base64_encode('test');
         $token->created = $time;
 
-        $provider = new ProviderTestSimple($this->userProvider);
+        $provider = new ProviderTestSimple(
+            'wsse_mopa',
+            __DIR__ . '/../../../nonceDir',
+            300,
+            $this->userProvider,
+            $this->getMock(UserCheckerInterface::class)
+        );
         $result = $provider->authenticate($token);
 
         $this->assertEquals($expected, $result);

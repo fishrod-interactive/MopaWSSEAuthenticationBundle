@@ -4,7 +4,7 @@
  */
 namespace Mopa\Bundle\WSSEAuthenticationBundle\Tests\Security\Factory;
 
-use Mopa\Bundle\WSSEAuthenticationBundle\Security\Factory\Factory;
+use Mopa\Bundle\WSSEAuthenticationBundle\Security\Factory\WsseFactory;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 
@@ -18,7 +18,7 @@ class FactoryTest extends \PHPUnit_Framework_TestCase
      */
     public function getPosition()
     {
-        $factory = new Factory();
+        $factory = new WsseFactory();
         $result = $factory->getPosition();
         $this->assertEquals('pre_auth', $result);
     }
@@ -28,7 +28,7 @@ class FactoryTest extends \PHPUnit_Framework_TestCase
      */
     public function getKey()
     {
-        $factory = new Factory();
+        $factory = new WsseFactory();
         $result = $factory->getKey();
         $this->assertEquals('wsse', $result);
         $this->assertEquals('wsse', $this->getFactory()->getKey());
@@ -36,10 +36,10 @@ class FactoryTest extends \PHPUnit_Framework_TestCase
 
     protected function getFactory()
     {
-        return $this->getMockForAbstractClass('Mopa\Bundle\WSSEAuthenticationBundle\Security\Factory\Factory', array());
+        return $this->getMockForAbstractClass('Mopa\Bundle\WSSEAuthenticationBundle\Security\Factory\WsseFactory', array());
     }
 
-    public function testCreate()
+    public function testCreate($key = 'foo')
     {
         $factory = $this->getFactory();
 
@@ -49,15 +49,25 @@ class FactoryTest extends \PHPUnit_Framework_TestCase
         list($authProviderId,
              $listenerId,
              $entryPointId
-        ) = $factory->create($container, 'foo', array('nonce_dir' => 'nonce', 'lifetime' => 300), 'user_provider', 'entry_point');
+        ) = $factory->create($container, $key, ['nonce_dir' => 'nonce', 'lifetime' => 300], 'user_provider', 'entry_point');
 
         // auth provider
-        $this->assertEquals('security.authentication.provider.wsse.foo', $authProviderId);
-        $this->assertEquals('security.authentication.listener.wsse.foo', $listenerId);
+        $this->assertEquals('mopa_wsse_authentication.' . $key, $authProviderId);
+        $this->assertEquals('mopa_wsse_authentication.security.listener.' . $key, $listenerId);
         $this->assertEquals('entry_point', $entryPointId);
-        $this->assertTrue($container->hasDefinition('security.authentication.listener.wsse.foo'));
-        $definition = $container->getDefinition('security.authentication.provider.wsse.foo');
-        $this->assertEquals(array('index_0' => new Reference('user_provider'), 'index_1' => 'nonce', 'index_2' => 300), $definition->getArguments());
-        $this->assertTrue($container->hasDefinition('security.authentication.provider.wsse.foo'));
+        $this->assertTrue($container->hasDefinition('mopa_wsse_authentication.security.listener.foo'));
+        $definition = $container->getDefinition('mopa_wsse_authentication.foo');
+
+        $this->assertEquals(
+            [
+                'index_0' => $key,
+                'index_1' => 'nonce',
+                'index_2' => 300,
+                0 => new Reference('user_provider'),
+                1 => new Reference('security.user_checker')
+            ],
+            $definition->getArguments()
+        );
+        $this->assertTrue($container->hasDefinition('mopa_wsse_authentication.' . $key));
     }
 }
